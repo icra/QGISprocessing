@@ -1,26 +1,17 @@
-Plugin Builder Results
+buildings2sewer
 
-Your plugin buildings2sewert was created in:
-    C:/Users/jpueyo/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins\buildings2sewer
+'buildings2sewer' is a QGIS processing plugin that connects the buildings of a city to the manholes of the sewer system. It connects each building (using the centroid as a departure point) to the closest manhole that is in the same or in a lower altitude.
 
-Your QGIS plugin directory is located at:
-    C:/Users/jpueyo/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins
+It returns the centroids of the buildings with the following fields:
 
-What's Next:
+  Id of the manhole which the building is connected
+  Altitude of the building's centroid
+  Distance between the building's centroid and the connected manhole
+  Altitude difference between the building's centroid and the connected manhole
 
-  * Copy the entire directory containing your new plugin to the QGIS plugin
-    directory
+If "Create connection lines is checked", it also returns a layer with the lines showing each connection.
 
-  * Run the tests (``make test``)
+Two parameters can be adjusted:
 
-  * Test the plugin by enabling it in the QGIS plugin manager
-
-  * Customize it by editing the implementation file: ``buildings2sewer.py``
-
-  * You can use the Makefile to compile your Ui and resource files when
-    you make changes. This requires GNU make (gmake)
-
-For more information, see the PyQGIS Developer Cookbook at:
-http://www.qgis.org/pyqgis-cookbook/index.html
-
-(C) 2011-2018 GeoApt LLC - geoapt.com
+  Maximum distance: If a connection is larger than the maximum distance, the algorithm searches manholes 1 meter above. This iteration is repeated until the connection is shorter than the maximum distance or until the altitude tolerance is reached
+  Altitude tolerance: It determines how many meters upper a manhole can be regarding the building to connect. The altitude tolerance is only used when the maximum distance is surpassed
