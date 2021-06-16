@@ -1,6 +1,6 @@
 # buildings2sewer
 
-## 'buildings2sewer' is a QGIS processing plugin that connects the buildings of a city to the manholes of the sewer system. It connects each building (using the centroid as a departure point) to the closest manhole that is in the same or in a lower altitude.
+### 'buildings2sewer' is a QGIS processing plugin that connects the buildings of a city to the manholes of the sewer system. It connects each building (using the centroid as a departure point) to the closest manhole that is in the same or in a lower altitude.
 
 It returns the centroids of the buildings with the following fields:
 
