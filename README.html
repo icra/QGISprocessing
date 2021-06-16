@@ -1,39 +1,29 @@
 <html>
 <body>
-<h3>Plugin Builder Results</h3>
+<h3>buildings2sewer</h3>
 
-Congratulations! You just built a plugin for QGIS!<br/><br />
+<p>
+'buildings2sewer' is a QGIS processing plugin that connects the buildings of a city to the manholes of the sewer system. It connects each building (using the centroid as a departure point) to the closest manhole that is in the same or in a lower altitude.
+</p>
 
-<div id='help' style='font-size:.9em;'>
-Your plugin <b>buildings2sewert</b> was created in:<br>
-&nbsp;&nbsp;<b>C:/Users/jpueyo/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins\buildings2sewer</b>
 <p>
-Your QGIS plugin directory is located at:<br>
-&nbsp;&nbsp;<b>C:/Users/jpueyo/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins</b>
-<p>
-<h3>What's Next</h3>
-<ol>
-    <li>Test the generated sources using <b>make test</b> (or run tests from your IDE)
-    <li>Copy the entire directory containing your new plugin to the QGIS plugin directory (see Notes below)
-    <li>Test the plugin by enabling it in the QGIS plugin manager and enabling the provider in the Processing Options
-    <li>Customize it by editing the implementation file <b>buildings2sewer_algorithm.py</b>
-</ol>
-Notes:
+It returns the centroids of the buildings with the following fields:
 <ul>
-    <li>You can use the <b>Makefile</b> to compile and deploy when you
-        make changes. This requires GNU make (gmake). The Makefile is ready to use, however you 
-        will have to edit it to add addional Python source files, dialogs, and translations.
-    <li>You can also use <b>pb_tool</b> to compile and deploy your plugin. Tweak the <i>pb_tool.cfg</i> file included with your plugin as you add files. Install <b>pb_tool</b> using 
-        <i>pip</i> or <i>easy_install</i>. See <b>http://loc8.cc/pb_tool</b> for more information.
+  <li>Id of the manhole which the building is connected</li>
+  <li>Altitude of the building's centroid</li>
+  <li>Distance between the building's centroid and the connected manhole</li>
+  <li>Altitude difference between the building's centroid and the connected manhole</li>
 </ul>
-</div>
-<div style='font-size:.9em;'>
-<p>
-For information on writing PyQGIS code, see <b>http://loc8.cc/pyqgis_resources</b> for a list of resources.
+If "Createconnection lines is checked", it also returns a layer withe the lines showing each connection.
 </p>
-</div>
+
 <p>
-&copy;2011-2018 GeoApt LLC - geoapt.com 
+Two parameters can be adjusted:
+<ul>
+  <li> <b>Maximum distance:</b> If a connection is larger than the maximum distance, the algorithm searches manholes 1 meter above. This iteration is repeated until the connection is shorter than the maximum distance or until the altitude tolerance is reached </li>
+  <li> <b>Altitude tolerance:</b> It determines how many meters upper a manhole can be regarding the building to connect. The altitude tolerance is only used when the maximum distance is surpassed</li>
+</ul>
 </p>
+
 </body>
 </html>
