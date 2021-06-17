@@ -35,5 +35,5 @@ def classFactory(iface):  # pylint: disable=invalid-name
     :type iface: QgsInterface
     """
     #
-    from .buildings2sewer import buildings2sewertPlugin
-    return buildings2sewertPlugin()
+    from .ICRA import ICRAPlugin
+    return ICRAPlugin()

@@ -37,7 +37,7 @@ import qgis.utils
 import processing
 import os
 
-pluginPath = os.path.split(os.path.dirname(__file__))[0]
+pluginPath = os.path.split(os.path.split(os.path.dirname(__file__))[0])[0]
 
 class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
     """
@@ -322,7 +322,7 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
     #     return 'Sewer system'
 
     def icon(self):
-        return QIcon(os.path.join(pluginPath, 'buildings2sewer', 'sewer.png'))
+        return QIcon(os.path.join(pluginPath, 'ICRA', 'icons', 'buildings2sewer.png'))
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)

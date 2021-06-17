@@ -3,17 +3,17 @@
 # This file should be included when you package your plugin.# Mandatory items:
 
 [general]
-name=buildings2sewer
+name=ICRA
 qgisMinimumVersion=3.0
-description=Connect buildings to the sewer system
+description=QGIS processing algorithms by ICRA
 version=0.1
 author=Josep Pueyo-Ros, ICRA
 email=jpueyo@icra.cat
 
-about=buildings2sewer connects the buildings of a city to their nearest lower manhole (or any other geometries). It incorporates two parameters that work together: maximum distance and altitude tolerance. If a connection is larger than maximum distance, the manholes 1 metres higher than the building are also considered. This iteration is repeated until "altitude tolerance" is reached.
+about=ICRA is the Catalan Institute for Water Research. This plugin contains all processing algorithms created by its researchers
 
-tracker=https://github.com/icra/buildings2sewer/issues
-repository=https://github.com/icra/buildings2sewer
+tracker=https://github.com/icra/QGISprocessing/issues
+repository=https://github.com/icra/QGISprocessing
 # End of mandatory metadata
 
 # Recommended items:

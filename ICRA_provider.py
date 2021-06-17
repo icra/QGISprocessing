@@ -32,13 +32,13 @@ __revision__ = '$Format:%H$'
 
 from qgis.core import QgsProcessingProvider
 from PyQt5.QtGui import QIcon
-from .buildings2sewer_algorithm import buildings2sewertAlgorithm
+from .algs import (buildings2sewertAlgorithm)
 import os
 
 pluginPath = os.path.split(os.path.dirname(__file__))[0]
 
 
-class buildings2sewertProvider(QgsProcessingProvider):
+class ICRAProvider(QgsProcessingProvider):
 
     def __init__(self):
         """
@@ -57,7 +57,7 @@ class buildings2sewertProvider(QgsProcessingProvider):
         """
         Loads all algorithms belonging to this provider.
         """
-        self.addAlgorithm(buildings2sewertAlgorithm())
+        self.addAlgorithm(buildings2sewertAlgorithm.buildings2sewertAlgorithm())
         # add additional algorithms here
         # self.addAlgorithm(MyOtherAlgorithm())
 
@@ -85,7 +85,7 @@ class buildings2sewertProvider(QgsProcessingProvider):
         """
 
         #return QgsProcessingProvider.icon(self)
-        return QIcon(os.path.join(pluginPath, 'buildings2sewer', 'icon.png'))
+        return QIcon(os.path.join(pluginPath, 'ICRA', 'icon.png'))
 
     def longName(self):
         """
