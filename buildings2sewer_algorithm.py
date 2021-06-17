@@ -31,9 +31,13 @@ __copyright__ = '(C) 2021 by Josep Pueyo-Ros, ICRA'
 __revision__ = '$Format:%H$'
 
 from qgis.PyQt.QtCore import *
+from PyQt5.QtGui import QIcon
 from qgis.core import *
 import qgis.utils
 import processing
+import os
+
+pluginPath = os.path.split(os.path.dirname(__file__))[0]
 
 class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
     """
@@ -326,6 +330,9 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
     #     formatting characters.
     #     """
     #     return 'Sewer system'
+
+    def icon(self):
+        return QIcon(os.path.join(pluginPath, 'buildings2sewer', 'sewer.png'))
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)

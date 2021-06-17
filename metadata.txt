@@ -12,7 +12,7 @@ email=jpueyo@icra.cat
 
 about=buildings2sewer connects the buildings of a city to their nearest lower manhole (or any other geometries). It incorporates two parameters that work together: maximum distance and altitude tolerance. If a connection is larger than maximum distance, the manholes 1 metres higher than the building are also considered. This iteration is repeated until "altitude tolerance" is reached.
 
-tracker=http://bugs
+tracker=https://github.com/icra/buildings2sewer/issues
 repository=https://github.com/icra/buildings2sewer
 # End of mandatory metadata
 
