@@ -31,7 +31,11 @@ __copyright__ = '(C) 2021 by Josep Pueyo-Ros, ICRA'
 __revision__ = '$Format:%H$'
 
 from qgis.core import QgsProcessingProvider
+from PyQt5.QtGui import QIcon
 from .buildings2sewer_algorithm import buildings2sewertAlgorithm
+import os
+
+pluginPath = os.path.split(os.path.dirname(__file__))[0]
 
 
 class buildings2sewertProvider(QgsProcessingProvider):
@@ -79,7 +83,9 @@ class buildings2sewertProvider(QgsProcessingProvider):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return QgsProcessingProvider.icon(self)
+
+        #return QgsProcessingProvider.icon(self)
+        return QIcon(os.path.join(pluginPath, 'buildings2sewer', 'icon.png'))
 
     def longName(self):
         """

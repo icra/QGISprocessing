@@ -310,22 +310,22 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
         """
         return self.tr(self.name())
 
-    def group(self):
-        """
-        Returns the name of the group this algorithm belongs to. This string
-        should be localised.
-        """
-        return self.tr(self.groupId())
-
-    def groupId(self):
-        """
-        Returns the unique ID of the group this algorithm belongs to. This
-        string should be fixed for the algorithm, and must not be localised.
-        The group id should be unique within each provider. Group id should
-        contain lowercase alphanumeric characters only and no spaces or other
-        formatting characters.
-        """
-        return 'Sewer system'
+    # def group(self):
+    #     """
+    #     Returns the name of the group this algorithm belongs to. This string
+    #     should be localised.
+    #     """
+    #     return self.tr(self.groupId())
+    #
+    # def groupId(self):
+    #     """
+    #     Returns the unique ID of the group this algorithm belongs to. This
+    #     string should be fixed for the algorithm, and must not be localised.
+    #     The group id should be unique within each provider. Group id should
+    #     contain lowercase alphanumeric characters only and no spaces or other
+    #     formatting characters.
+    #     """
+    #     return 'Sewer system'
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
@@ -374,3 +374,14 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
                 #update progressbar
                 feedback.setProgress(int(current * total))
         return mem_layer
+
+    def shortHelpString(self):
+        return "<p>This algorithm connects the buildings of a city to the manholes of the sewer system. It connects each building (using the centroid as a departure point) to the closest manhole that is in the same or in a lower altitude.</p>"\
+        "<p>It returns the centroids of the buildings with the following fields:"\
+        "<ul><li>Id of the manhole which the building is connected</li><li>Altitude of the building's centroid</li><li>Distance between the building's centroid and the connected manhole</li>"\
+        "<li>Altitude difference between the building's centroid and the connected manhole</li></ul>"\
+        "If \"Create connection lines is checked\", it also returns a layer with the lines showing each connection.</p>"\
+        "<p>Two parameters can be adjusted:<ul>"\
+        "<li> <b>Maximum distance:</b> If a connection is larger than the maximum distance, the algorithm searches manholes 1 meter above. This iteration is repeated until the connection is shorter than the maximum distance or until the altitude tolerance is reached </li>"\
+        "<li> <b>Altitude tolerance:</b> It determines how many meters upper a manhole can be regarding the building to connect. The altitude tolerance is only used when the maximum distance is surpassed</li>"\
+        "</ul></p>"

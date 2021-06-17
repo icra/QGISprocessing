@@ -10,7 +10,7 @@ version=0.1
 author=Josep Pueyo-Ros, ICRA
 email=jpueyo@icra.cat
 
-about=buildings2sewer connects the buildings of a city to their nearest lower manhole (or any other geometries). It incorporates two parameters that work together: maximum distance and z tolerance. If a connection is larger than maximum distance, the manholes 1 metres higher than the building are also considered. This iteration is repeated until "z tolerance" is reached.
+about=buildings2sewer connects the buildings of a city to their nearest lower manhole (or any other geometries). It incorporates two parameters that work together: maximum distance and altitude tolerance. If a connection is larger than maximum distance, the manholes 1 metres higher than the building are also considered. This iteration is repeated until "altitude tolerance" is reached.
 
 tracker=http://bugs
 repository=https://github.com/icra/buildings2sewer
@@ -44,4 +44,3 @@ Category of the plugin: Raster, Vector, Database or Web
 
 # If the plugin can run on QGIS Server.
 server=False
-
