@@ -276,26 +276,16 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
             # Update the progress bar
             feedback.setProgress(int(current * total))
 
-
-
-        # for current, feature in enumerate(features):
-        #     # Stop the algorithm if cancel button has been clicked
-        #     if feedback.isCanceled():
-        #         break
-        #
-        #     # Add a feature in the sink
-        #     sink.addFeature(feature, QgsFeatureSink.FastInsert)
-        #
-            # Update the progress bar
-            # feedback.setProgress(int(current * total))
-
         # Return the results of the algorithm. In this case our only result is
         # the feature sink which contains the processed features, but some
         # algorithms may return multiple feature sinks, calculated numeric
         # statistics, etc. These should all be included in the returned
         # dictionary, with keys matching the feature corresponding parameter
         # or output names.
-        return {self.OUTPUT: dest_id, 'LINES': lines_id}
+        if connection_lines:
+            return {self.OUTPUT: dest_id, 'LINES': lines_id}
+        else:
+            return {self.OUTPUT: dest_id}
 
     def name(self):
         """
