@@ -152,6 +152,10 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
         nodes_o = self.parameterAsVectorLayer(parameters, 'MANHOLES', context)
         mde = self.parameterAsRasterLayer(parameters, 'DEM', context)
 
+        if not self.checkExtent(parcels_o, mde) or not self.checkExtent(nodes_o, mde):
+            feedback.reportError("Some of the layers are out of DEM")
+            return {}
+
         #load parameters
         max_dist = self.parameterAsDouble(parameters, 'MAX_DIST', context)
         max_z_tol = self.parameterAsInt(parameters, 'Z_TOL', context)
@@ -371,6 +375,22 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
                 #update progressbar
                 feedback.setProgress(int(current * total))
         return mem_layer
+
+    def checkExtent(self, layer, background):
+        xMaxL = layer.extent().xMaximum()
+        xMinL = layer.extent().xMinimum()
+        yMaxL = layer.extent().yMaximum()
+        yMinL = layer.extent().yMinimum()
+
+        xMaxB = background.extent().xMaximum()
+        xMinB = background.extent().xMinimum()
+        yMaxB = background.extent().yMaximum()
+        yMinB = background.extent().yMinimum()
+
+        if xMaxL > xMaxB or xMinL < xMinB or yMaxL > yMaxB or yMinL < yMinB:
+            return False
+        else:
+            return True
 
     def shortHelpString(self):
         return "<p>This algorithm connects the buildings of a city to the manholes of the sewer system. It connects each building (using the centroid as a departure point) to the closest manhole that is in the same or in a lower altitude.</p>"\

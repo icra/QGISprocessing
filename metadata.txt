@@ -23,9 +23,9 @@ hasProcessingProvider=yes
 # changelog=
 
 # Tags are comma separated with spaces allowed
-tags=python
+tags=python, water, sewer system
 
-homepage=
+homepage=https://github.com/icra/QGISprocessing
 category=Analysis
 icon=icon.png
 # experimental flag
