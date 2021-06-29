@@ -98,8 +98,20 @@ class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
 
         total_points = outlets.featureCount()
 
+        if outlets.fields().indexFromName('z') == -1:
+            outlets = self.z_sampling(outlets, dem, feedback)
+
+        request = QgsFeatureRequest()
+
+        # set order by field
+        clause = request.OrderByClause('z', ascending=False)
+        orderby = request.OrderBy([clause])
+        request.setOrderBy(orderby)
+
+        features = outlets.getFeatures(request)
+
         # Iterate over point features
-        for i, pnt in enumerate(outflowPoints.getFeatures()):
+        for i, pnt in enumerate(features):
 
             # Get x and y coordinate from point feature
             geom = pnt.geometry()
@@ -136,10 +148,15 @@ class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
             for feature in catch_lyr.getFeatures(request):
                 sink.addFeature(feature, QgsFeatureSink.FastInsert)
 
-            exp = QgsExpression('"DN"<100')
-            request = QgsFeatureRequest(exp)
+            catch_lyr.selectByExpression('"DN"<100')
+            clip = processing.run("native:saveselectedfeatures", {'INPUT': catch_lyr, 'OUTPUT': 'memory:'})['OUTPUT']
+            catch_lyr.removeSelection()
 
-            ## cal crear una capa amb els polígons < 100 i utilitzar-la per foradar el ràster.
+            gdalwarp -s_srs EPSG:25831 -t_srs EPSG:25831
+                -of GTiff -tr 5.0 -5.0 -tap -cutline C:/Users/jpueyo/Desktop/poligons.gpkg -cl poligons -crop_to_cutline "C:/Users/jpueyo/Google Drive/carto_cat/mde5x5/met5v10as0f0334Am1r080/met5v10as0f0334Amr1r080.txt" C:/Users/jpueyo/AppData/Local/Temp/processing_oZlbRg/3b58c52a6f204dfa9ad79eb81bd1e440/OUTPUT.tif
+
+
+
 
 
         return {'OUTPUT': dest_id}
@@ -171,6 +188,45 @@ class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
     #     formatting characters.
     #     """
     #     return 'Sewer system'
+
+    def z_sampling(self, points, mde, feedback):
+
+        #create z field if it don't exist
+        if points.fields().indexFromName('z') == -1:
+            z = QgsField('z', QVariant.Double)
+            points.dataProvider().addAttributes([z])
+            points.updateFields()
+
+        #search the index of z field
+        idx = points.fields().indexFromName('z')
+
+        #set the progressbar
+        total = 100.0 / points.featureCount() if points.featureCount() else 0
+        features = points.getFeatures()
+
+        mem_layer = QgsVectorLayer("Point", "duplicated_layer", "memory")
+
+        mem_layer_data = mem_layer.dataProvider()
+        attr = points.dataProvider().fields().toList()
+        mem_layer_data.addAttributes(attr)
+        mem_layer.updateFields()
+        mem_layer_data.addFeatures(features)
+
+        features = mem_layer.getFeatures()
+
+        #open editing mode in points and write z values in z field
+        with edit(mem_layer):
+            for current, point in enumerate(features):
+                if feedback.isCanceled():
+                    break
+
+                x = point.geometry().asPoint()
+                val, res = mde.dataProvider().sample(x, 1)
+                point[idx] = val
+                mem_layer.updateFeature(point)
+
+                #update progressbar
+                feedback.setProgress(int(current * total))
 
     def icon(self):
         return QIcon(os.path.join(pluginPath, 'ICRA', 'icons', 'buildings2sewer.png'))
