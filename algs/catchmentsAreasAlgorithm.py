@@ -113,6 +113,11 @@ class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
         # Iterate over point features
         for i, pnt in enumerate(features):
 
+            if clip_dem:
+                input_dem = clip_dem
+            else:
+                input_dem = dem
+
             # Get x and y coordinate from point feature
             geom = pnt.geometry()
             p = geom.asPoint()
@@ -121,7 +126,7 @@ class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
 
             feedback.pushInfo('Creating upslope area for point ({:.2f}, {:.2f}) - {} of {}'.format(
                 x, y, i + 1, total_points))
-            feedback.setProgress(i / total_points * 100.)
+            feedback.setProgress(i / total_points * 100)
 
             # Calculate catchment raster from point feature
             catchraster = processing.run("saga:upslopearea", {'TARGET':None,
@@ -149,13 +154,15 @@ class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
                 sink.addFeature(feature, QgsFeatureSink.FastInsert)
 
             catch_lyr.selectByExpression('"DN"<100')
-            clip = processing.run("native:saveselectedfeatures", {'INPUT': catch_lyr, 'OUTPUT': 'memory:'})['OUTPUT']
+            mask = processing.run("native:saveselectedfeatures", {'INPUT': catch_lyr, 'OUTPUT': 'memory:'})['OUTPUT']
             catch_lyr.removeSelection()
 
-            gdalwarp -s_srs EPSG:25831 -t_srs EPSG:25831
-                -of GTiff -tr 5.0 -5.0 -tap -cutline C:/Users/jpueyo/Desktop/poligons.gpkg -cl poligons -crop_to_cutline "C:/Users/jpueyo/Google Drive/carto_cat/mde5x5/met5v10as0f0334Am1r080/met5v10as0f0334Amr1r080.txt" C:/Users/jpueyo/AppData/Local/Temp/processing_oZlbRg/3b58c52a6f204dfa9ad79eb81bd1e440/OUTPUT.tif
-
-
+            clip_output = processing.run("gdal:cliprasterbymasklayer", {
+                                        'INPUT': input_dem,
+                                        'MASK': mask,
+                                        'SOURCE_CRS': dem.sourceCrs(),
+                                        'TARGET_CRS': dem.sourceCrs(),
+                                        'KEEP_RESOLUTION': True})
 
 
 
