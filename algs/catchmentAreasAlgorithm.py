@@ -39,7 +39,7 @@ import os
 
 pluginPath = os.path.split(os.path.split(os.path.dirname(__file__))[0])[0]
 
-class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
+class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
 
     # Constants used to refer to parameters and outputs. They will be
     # used when calling the algorithm from another algorithm, or when
@@ -56,7 +56,7 @@ class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterVectorLayer(
                 'INPUT',
-                self.tr('OUTLETS'),
+                self.tr('Outlets layer'),
                 [QgsProcessing.TypeVectorPoint]
             )
         )
@@ -65,7 +65,7 @@ class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterField(
                 'outlet_id',
                 self.tr('Field with outlets id'),
-                parentLayerParameterName='OUTLETS',
+                parentLayerParameterName='INPUT',
                 allowMultiple=False
             )
         )
@@ -87,19 +87,19 @@ class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
 
-        outlets = self.parameterAsVectorLayer(parameters, 'OUTLETS', context)
+        input = self.parameterAsVectorLayer(parameters, 'INPUT', context)
         dem = self.parameterAsRasterLayer(parameters, 'DEM', context)
 
         field = QgsFields()
-        field.append(QgsField("id", QVariant.QString))
+        field.append(QgsField("id", QVariant.String))
 
         (sink, dest_id) = self.parameterAsSink(parameters, 'OUTPUT',
-                context, field, QgsWkbTypes.Polygon, outlets.sourceCrs())
+                context, field, QgsWkbTypes.Polygon, input.sourceCrs())
 
-        total_points = outlets.featureCount()
+        total_points = input.featureCount()
 
-        if outlets.fields().indexFromName('z') == -1:
-            outlets = self.z_sampling(outlets, dem, feedback)
+        if input.fields().indexFromName('z') == -1:
+            outlets = self.z_sampling(input, dem, feedback)
 
         request = QgsFeatureRequest()
 
@@ -113,8 +113,10 @@ class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
         # Iterate over point features
         for i, pnt in enumerate(features):
 
-            if clip_dem:
+            # if dem has been clipped use it as input_dem, otherwise use original dem
+            if 'clip_dem' in locals():
                 input_dem = clip_dem
+                feedback.setProgressText('Using clipped dem')
             else:
                 input_dem = dem
 
@@ -136,7 +138,7 @@ class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
                                         'SINKROUTE': None,
                                         'METHOD':0, 'CONVERGE':1.1,
                                         'AREA': 'TEMPORARY_OUTPUT'})
-
+            feedback.pushInfo('Catchment area created: ' + str(catchraster['AREA']))
             # Polygonize raster catchment
             catchpoly = processing.run("gdal:polygonize", {'INPUT':catchraster['AREA'],
                                         'BAND':1,
@@ -144,27 +146,31 @@ class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
                                         'EIGHT_CONNECTEDNESS':False,
                                         'OUTPUT': 'TEMPORARY_OUTPUT'})
 
+            feedback.pushInfo('Catchment area polygonized: ' + str(catchpoly['OUTPUT']))
             # Select features having DN = 100 and export them to a SHP file
             catch_lyr = QgsVectorLayer(catchpoly['OUTPUT'], 'catchmments', 'ogr')
             exp = QgsExpression('"DN"=100')
             request = QgsFeatureRequest(exp)
-            # catch_lyr.selectByExpression('"DN"=100')
 
+            # add catchment area to output
             for feature in catch_lyr.getFeatures(request):
                 sink.addFeature(feature, QgsFeatureSink.FastInsert)
 
+            #create layer with polygon that is not catchment area
             catch_lyr.selectByExpression('"DN"<100')
             mask = processing.run("native:saveselectedfeatures", {'INPUT': catch_lyr, 'OUTPUT': 'memory:'})['OUTPUT']
             catch_lyr.removeSelection()
 
+            # delete catchment area from dem
             clip_output = processing.run("gdal:cliprasterbymasklayer", {
-                                        'INPUT': input_dem,
-                                        'MASK': mask,
-                                        'SOURCE_CRS': dem.sourceCrs(),
-                                        'TARGET_CRS': dem.sourceCrs(),
-                                        'KEEP_RESOLUTION': True})
+                                            'INPUT': input_dem,
+                                            'MASK': mask,
+                                            'SOURCE_CRS': input_dem.crs(),
+                                            'TARGET_CRS': input_dem.crs(),
+                                            'KEEP_RESOLUTION': True,
+                                            'OUTPUT': 'TEMPORARY_OUTPUT'})
 
-
+            clip_dem = QgsRasterLayer(clip_output['OUTPUT'])
 
         return {'OUTPUT': dest_id}
 
@@ -197,16 +203,6 @@ class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
     #     return 'Sewer system'
 
     def z_sampling(self, points, mde, feedback):
-
-        #create z field if it don't exist
-        if points.fields().indexFromName('z') == -1:
-            z = QgsField('z', QVariant.Double)
-            points.dataProvider().addAttributes([z])
-            points.updateFields()
-
-        #search the index of z field
-        idx = points.fields().indexFromName('z')
-
         #set the progressbar
         total = 100.0 / points.featureCount() if points.featureCount() else 0
         features = points.getFeatures()
@@ -218,6 +214,15 @@ class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
         mem_layer_data.addAttributes(attr)
         mem_layer.updateFields()
         mem_layer_data.addFeatures(features)
+
+        #create z field if it don't exist
+        if mem_layer.fields().indexFromName('z') == -1:
+            z = QgsField('z', QVariant.Double)
+            mem_layer.dataProvider().addAttributes([z])
+            mem_layer.updateFields()
+
+        #search the index of z field
+        idx = mem_layer.fields().indexFromName('z')
 
         features = mem_layer.getFeatures()
 
@@ -235,6 +240,8 @@ class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
                 #update progressbar
                 feedback.setProgress(int(current * total))
 
+        return mem_layer
+
     def icon(self):
         return QIcon(os.path.join(pluginPath, 'ICRA', 'icons', 'buildings2sewer.png'))
 
@@ -242,7 +249,7 @@ class catchmentsAreasAlgorithm(QgsProcessingAlgorithm):
         return QCoreApplication.translate('Processing', string)
 
     def createInstance(self):
-        return catchmentsAreasAlgorithm()
+        return catchmentAreasAlgorithm()
 
     def shortHelpString(self):
         return "<p>This algorithm connects the buildings of a city to the manholes of the sewer system. It connects each building (using the centroid as a departure point) to the closest manhole that is in the same or in a lower altitude.</p>"\
