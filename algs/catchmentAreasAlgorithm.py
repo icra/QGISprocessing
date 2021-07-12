@@ -89,6 +89,7 @@ class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
 
         input = self.parameterAsVectorLayer(parameters, 'INPUT', context)
         dem = self.parameterAsRasterLayer(parameters, 'DEM', context)
+        outlet_id = self.parameterAsString(parameters, 'outlet_id', context)
 
         field = QgsFields()
         field.append(QgsField("id", QVariant.String))
@@ -100,6 +101,8 @@ class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
 
         if input.fields().indexFromName('z') == -1:
             outlets = self.z_sampling(input, dem, feedback)
+        else:
+            outlets = input
 
         request = QgsFeatureRequest()
 
@@ -126,8 +129,8 @@ class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
             x = p.x()
             y = p.y()
 
-            feedback.pushInfo('Creating upslope area for point ({:.2f}, {:.2f}) - {} of {}'.format(
-                x, y, i + 1, total_points))
+            feedback.pushInfo('Creating upslope area for point ({}) - {} of {}'.format(
+                pnt[outlet_id], i + 1, total_points))
             feedback.setProgress(i / total_points * 100)
 
             # Calculate catchment raster from point feature
@@ -138,7 +141,7 @@ class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
                                         'SINKROUTE': None,
                                         'METHOD':0, 'CONVERGE':1.1,
                                         'AREA': 'TEMPORARY_OUTPUT'})
-            feedback.pushInfo('Catchment area created: ' + str(catchraster['AREA']))
+            # feedback.pushInfo('Catchment area created: ' + str(catchraster['AREA']))
             # Polygonize raster catchment
             catchpoly = processing.run("gdal:polygonize", {'INPUT':catchraster['AREA'],
                                         'BAND':1,
@@ -146,7 +149,7 @@ class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
                                         'EIGHT_CONNECTEDNESS':False,
                                         'OUTPUT': 'TEMPORARY_OUTPUT'})
 
-            feedback.pushInfo('Catchment area polygonized: ' + str(catchpoly['OUTPUT']))
+            # feedback.pushInfo('Catchment area polygonized: ' + str(catchpoly['OUTPUT']))
             # Select features having DN = 100 and export them to a SHP file
             catch_lyr = QgsVectorLayer(catchpoly['OUTPUT'], 'catchmments', 'ogr')
             exp = QgsExpression('"DN"=100')
@@ -158,7 +161,7 @@ class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
 
             #create layer with polygon that is not catchment area
             catch_lyr.selectByExpression('"DN"<100')
-            mask = processing.run("native:saveselectedfeatures", {'INPUT': catch_lyr, 'OUTPUT': 'memory:'})['OUTPUT']
+            mask = processing.run("native:saveselectedfeatures", {'INPUT': catch_lyr, 'OUTPUT': 'memory'})['OUTPUT']
             catch_lyr.removeSelection()
 
             # delete catchment area from dem
@@ -167,8 +170,9 @@ class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
                                             'MASK': mask,
                                             'SOURCE_CRS': input_dem.crs(),
                                             'TARGET_CRS': input_dem.crs(),
+                                            'NODATA': null,
                                             'KEEP_RESOLUTION': True,
-                                            'OUTPUT': 'TEMPORARY_OUTPUT'})
+                                            'OUTPUT': 'C:/Users/Josep Pueyo-Ros/Desktop/plugin-test/clipped.sdat'})
 
             clip_dem = QgsRasterLayer(clip_output['OUTPUT'])
 
