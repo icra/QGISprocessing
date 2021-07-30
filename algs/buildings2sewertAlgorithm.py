@@ -36,6 +36,7 @@ from qgis.core import *
 import qgis.utils
 import processing
 import os
+from .common_functions import checkExtent, z_sampling
 
 pluginPath = os.path.split(os.path.split(os.path.dirname(__file__))[0])[0]
 
@@ -152,7 +153,7 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
         nodes_o = self.parameterAsVectorLayer(parameters, 'MANHOLES', context)
         mde = self.parameterAsRasterLayer(parameters, 'DEM', context)
 
-        if not self.checkExtent(parcels_o, mde) or not self.checkExtent(nodes_o, mde):
+        if not checkExtent(parcels_o, mde) or not checkExtent(nodes_o, mde):
             feedback.reportError("Some of the layers are out of DEM")
             return {}
 
@@ -179,9 +180,9 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
         d = QgsDistanceArea()
 
         if parcels.fields().indexFromName('z') == -1:
-            parcels = self.z_sampling(parcels, mde, feedback)
+            parcels = z_sampling(parcels, mde, feedback)
         if nodes.fields().indexFromName('z') == -1:
-            nodes = self.z_sampling(nodes, mde, feedback)
+            nodes = z_sampling(nodes, mde, feedback)
 
         # QgsMessageLog.logMessage("Hello world", 'buildings2sewer', level=Qgis.Info)
         feedback.setProgressText("Calculation of altitudes finished")
@@ -333,64 +334,6 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
 
     def createInstance(self):
         return buildings2sewertAlgorithm()
-
-    #define function to calculate z values from mde
-    def z_sampling(self, points, mde, feedback):
-
-
-        #create z field if it don't exist
-        if points.fields().indexFromName('z') == -1:
-            z = QgsField('z', QVariant.Double)
-            points.dataProvider().addAttributes([z])
-            points.updateFields()
-
-        #search the index of z field
-        idx = points.fields().indexFromName('z')
-
-        #set the progressbar
-        total = 100.0 / points.featureCount() if points.featureCount() else 0
-        features = points.getFeatures()
-
-        mem_layer = QgsVectorLayer("Point", "duplicated_layer", "memory")
-
-        mem_layer_data = mem_layer.dataProvider()
-        attr = points.dataProvider().fields().toList()
-        mem_layer_data.addAttributes(attr)
-        mem_layer.updateFields()
-        mem_layer_data.addFeatures(features)
-
-        features = mem_layer.getFeatures()
-
-        #open editing mode in points and write z values in z field
-        with edit(mem_layer):
-            for current, point in enumerate(features):
-                if feedback.isCanceled():
-                    break
-
-                x = point.geometry().asPoint()
-                val, res = mde.dataProvider().sample(x, 1)
-                point[idx] = val
-                mem_layer.updateFeature(point)
-
-                #update progressbar
-                feedback.setProgress(int(current * total))
-        return mem_layer
-
-    def checkExtent(self, layer, background):
-        xMaxL = layer.extent().xMaximum()
-        xMinL = layer.extent().xMinimum()
-        yMaxL = layer.extent().yMaximum()
-        yMinL = layer.extent().yMinimum()
-
-        xMaxB = background.extent().xMaximum()
-        xMinB = background.extent().xMinimum()
-        yMaxB = background.extent().yMaximum()
-        yMinB = background.extent().yMinimum()
-
-        if xMaxL > xMaxB or xMinL < xMinB or yMaxL > yMaxB or yMinL < yMinB:
-            return False
-        else:
-            return True
 
     def shortHelpString(self):
         return "<p>This algorithm connects the buildings of a city to the manholes of the sewer system. It connects each building (using the centroid as a departure point) to the closest manhole that is in the same or in a lower altitude.</p>"\
