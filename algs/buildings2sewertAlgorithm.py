@@ -249,21 +249,26 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
             #set min_dist as infinite
             min_dist = float('inf')
 
+            #burn variables in case a feature is not valid
+            closest = 'undefined'
+            z_diff = 'undefined'
+
             #loop until min dist or z-tol reach threshold
             while (min_dist >= max_dist) and (z_tol <= max_z_tol):
                 #filter lower nodes
                 exp = QgsExpression('z <= {} + {}'.format(parcel['z'], z_tol))
                 request = QgsFeatureRequest(exp).setSubsetOfAttributes([node_idx, node_z])
-
                 #search closest node
                 for node in nodes.getFeatures(request):
                     n_geom = node.geometry().asPoint()
                     dist = d.measureLine(p_geom, n_geom)
+
                     if dist < min_dist:
                         min_dist = dist
                         closest = node[node_idx]
                         z_diff = node[node_z] - parcel[parcel_z]
-                        closest_geom = node.geometry().asPoint()
+                        if connection_lines:
+                            closest_geom = node.geometry().asPoint()
                 z_tol += 1
             parcel[parcel_node] = closest
             parcel[parcel_dist] = min_dist
