@@ -22,15 +22,6 @@ def checkExtent(layer, background):
 
 def z_sampling(points, mde, feedback):
 
-    #create z field if it don't exist
-    if points.fields().indexFromName('z') == -1:
-        z = QgsField('z', QVariant.Double)
-        points.dataProvider().addAttributes([z])
-        points.updateFields()
-
-    #search the index of z field
-    idx = points.fields().indexFromName('z')
-
     #set the progressbar
     total = 100.0 / points.featureCount() if points.featureCount() else 0
     features = points.getFeatures()
@@ -42,6 +33,15 @@ def z_sampling(points, mde, feedback):
     mem_layer_data.addAttributes(attr)
     mem_layer.updateFields()
     mem_layer_data.addFeatures(features)
+
+    #create z field if it don't exist
+    if mem_layer.fields().indexFromName('z') == -1:
+        z = QgsField('z', QVariant.Double)
+        mem_layer.dataProvider().addAttributes([z])
+        mem_layer.updateFields()
+
+    #search the index of z field
+    idx = mem_layer.fields().indexFromName('z')
 
     features = mem_layer.getFeatures()
 
