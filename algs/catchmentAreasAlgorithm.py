@@ -154,23 +154,22 @@ class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
             exp = QgsExpression('"DN"=100')
             request = QgsFeatureRequest(exp)
             features = catch_lyr.getFeatures(request)
-            feedback.setProgressText("There are {} features in catch_lyr".format(catch_lyr.featureCount())
 
-            catchments = QgsVectorLayer("polygon", "catchments", "memory")
+            catchments = QgsVectorLayer("Polygon", "catchments", "memory")
             catchments_data = catchments.dataProvider()
             catchments_data.addAttributes([id])
             catchments.updateFields()
-            feedback.setProgressText("The fields in catchments are {}".format(catchments.fields.toList()))
+            # feedback.setProgressText("The fields in catchments are {}".format(catchments.fields().toList()))
 
             #in first slope, just add feature to sink, then, first avoid overlapping with previous areas
             if catchments.featureCount() > 0:
-                catchment = QgsVectorLayer("polygon", "duplicated_layer", "memory")
+                catchment = QgsVectorLayer("Polygon", "duplicated_layer", "memory")
                 catchment_data = catchment.dataProvider()
                 attr = catch_lyr.dataProvider().fields().toList()
                 catchment_data.addAttributes(attr)
                 catchment.updateFields()
                 catchment_data.addFeatures(features)
-                # catchment.setCrs(input.crs())
+                feedback.setProgressText('Inside if')
 
 
                 catchment_final = processing.run('native:difference',{
@@ -181,12 +180,13 @@ class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
             # add catchment area to output
                 for feature in catchment_final.getFeatures():
                     feature['outlet_id'] = pnt[outlet_id]
-                    catchments.addFeature(feature)
+                    catchments.dataProvider().addFeature(feature)
                     feedback.setProgressText('Round 1. The number of features in catchments is {}'.format(catchments.featureCount()))
             else:
                 for feature in features:
                     feature['outlet_id'] = pnt[outlet_id]
-                    catchments.addFeature(feature)
+                    feedback.setProgressText("Feature is {}".format(feature['outlet_id']))
+                    catchments.dataProvider().addFeatures(feature)
                     feedback.setProgressText('The number of features in sink is {}'.format(catchments.featureCount()))
 
         for feature in catchments.getFeatures():
