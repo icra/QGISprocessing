@@ -64,7 +64,7 @@ class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
 
         self.addParameter(
             QgsProcessingParameterField(
-                'outlet_id',
+                'OUTLET_ID',
                 self.tr('Field with outlets id'),
                 parentLayerParameterName='INPUT',
                 allowMultiple=False
@@ -90,10 +90,11 @@ class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
 
         input = self.parameterAsVectorLayer(parameters, 'INPUT', context)
         dem = self.parameterAsRasterLayer(parameters, 'DEM', context)
-        outlet_id = self.parameterAsString(parameters, 'outlet_id', context)
+        outlet_id = self.parameterAsString(parameters, 'OUTLET_ID', context)
 
         field = QgsFields()
-        field.append(QgsField("outlet_id", QVariant.String))
+        id = QgsField("outlet_id", QVariant.String)
+        field.append(id)
 
         (sink, dest_id) = self.parameterAsSink(parameters, 'OUTPUT',
                 context, field, QgsWkbTypes.Polygon, input.sourceCrs())
@@ -114,6 +115,12 @@ class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
 
         features = outlets.getFeatures(request)
 
+        catchments = QgsVectorLayer("Polygon", "catchments", "memory")
+        catchments_data = catchments.dataProvider()
+        catchments_data.addAttributes([id])
+        catchments.updateFields()
+        feedback.setProgressText("Fields in catchments are {}".format(catchments_data.fields().toList()))
+
         # Iterate over point features
         for i, pnt in enumerate(features):
 
@@ -123,9 +130,10 @@ class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
             x = p.x()
             y = p.y()
 
-            feedback.pushInfo('Creating upslope area for outlet id {} - {} of {}'.format(
-                pnt[outlet_id], i + 1, total_points))
+            feedback.pushInfo('Creating upslope area for outlet id {} - {} of {}'.format(pnt[outlet_id], i + 1, total_points))
             feedback.setProgress(i / total_points * 100)
+
+            pnt_outlet_id = str(pnt[outlet_id])
 
             # Calculate catchment raster from point feature
             catchraster = processing.run("saga:upslopearea", {'TARGET':None,
@@ -146,7 +154,6 @@ class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
             # feedback.pushInfo('Catchment area polygonized: ' + str(catchpoly['OUTPUT']))
             # Select features having DN = 100 and export them to a SHP file
             catch_lyr = QgsVectorLayer(catchpoly['OUTPUT'], 'catchmments', 'ogr')
-            id = QgsField('outlet_id', QVariant.String)
             catch_lyr.dataProvider().addAttributes([id])
             catch_lyr.updateFields()
 
@@ -155,10 +162,7 @@ class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
             request = QgsFeatureRequest(exp)
             features = catch_lyr.getFeatures(request)
 
-            catchments = QgsVectorLayer("Polygon", "catchments", "memory")
-            catchments_data = catchments.dataProvider()
-            catchments_data.addAttributes([id])
-            catchments.updateFields()
+
             # feedback.setProgressText("The fields in catchments are {}".format(catchments.fields().toList()))
 
             #in first slope, just add feature to sink, then, first avoid overlapping with previous areas
@@ -177,19 +181,23 @@ class catchmentAreasAlgorithm(QgsProcessingAlgorithm):
                     'OVERLAY': catchments,
                     'OUTPUT': 'memory:'
                     })['OUTPUT']
-            # add catchment area to output
+                # add catchment area to output
                 for feature in catchment_final.getFeatures():
-                    feature['outlet_id'] = pnt[outlet_id]
+                    feature['outlet_id'] = pnt_outlet_id
                     catchments.dataProvider().addFeature(feature)
-                    feedback.setProgressText('Round 1. The number of features in catchments is {}'.format(catchments.featureCount()))
+                    feedback.setProgressText('Inside if. Oulet_id is {}'.format(pnt_outlet_id))
             else:
+                fList = []
                 for feature in features:
-                    feature['outlet_id'] = pnt[outlet_id]
+                    feature['outlet_id'] = pnt_outlet_id
                     feedback.setProgressText("Feature is {}".format(feature['outlet_id']))
-                    catchments.dataProvider().addFeatures(feature)
-                    feedback.setProgressText('The number of features in sink is {}'.format(catchments.featureCount()))
+                    fList.append(feature)
+
+                catchments.dataProvider().addFeatures(fList)
+                catchments.commitChanges()
 
         for feature in catchments.getFeatures():
+            feedback.setProgressText("Adding to sink. Feature outlet_id is {}".format(feature['outlet_id']))
             sink.addFeature(feature, QgsFeatureSink.FastInsert)
 
         return {'OUTPUT': dest_id}
