@@ -38,7 +38,7 @@ import processing
 import os
 from .common_functions import checkExtent, z_sampling
 
-pluginPath = os.path.split(os.path.split(os.path.dirname(__file__))[0])[0]
+pluginPath = os.path.dirname(__file__)
 
 class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
     """
@@ -332,7 +332,7 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
     #     return 'Sewer system'
 
     def icon(self):
-        return QIcon(os.path.join(pluginPath, 'ICRA', 'icons', 'buildings2sewer.png'))
+        return QIcon(os.path.join(pluginPath, '..', 'icons', 'buildings2sewer.png'))
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
