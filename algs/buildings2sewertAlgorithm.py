@@ -36,7 +36,8 @@ from qgis.core import *
 import qgis.utils
 import processing
 import os
-from .common_functions import checkExtent, z_sampling
+from .utils.check_extent import check_extent
+from .utils.z_sampling import z_sampling
 
 pluginPath = os.path.dirname(__file__)
 
@@ -153,7 +154,7 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
         nodes_o = self.parameterAsVectorLayer(parameters, 'MANHOLES', context)
         mde = self.parameterAsRasterLayer(parameters, 'DEM', context)
 
-        if not checkExtent(parcels_o, mde) or not checkExtent(nodes_o, mde):
+        if not check_extent(parcels_o, mde) or not check_extent(nodes_o, mde):
             feedback.reportError("Some of the layers are out of DEM")
             return {}
 

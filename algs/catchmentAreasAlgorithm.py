@@ -36,7 +36,7 @@ from qgis.core import *
 import qgis.utils
 import processing
 import os
-from .common_functions import checkExtent, z_sampling
+from .utils.z_sampling import z_sampling
 
 pluginPath = os.path.split(os.path.split(os.path.dirname(__file__))[0])[0]
 

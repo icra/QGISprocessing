@@ -1,25 +1,5 @@
 from qgis.PyQt.QtCore import *
-from PyQt5.QtGui import QIcon
 from qgis.core import *
-import qgis.utils
-import processing
-
-def checkExtent(layer, background):
-    xMaxL = layer.extent().xMaximum()
-    xMinL = layer.extent().xMinimum()
-    yMaxL = layer.extent().yMaximum()
-    yMinL = layer.extent().yMinimum()
-
-    xMaxB = background.extent().xMaximum()
-    xMinB = background.extent().xMinimum()
-    yMaxB = background.extent().yMaximum()
-    yMinB = background.extent().yMinimum()
-
-    if xMaxL > xMaxB or xMinL < xMinB or yMaxL > yMaxB or yMinL < yMinB:
-        return False
-    else:
-        return True
-
 def z_sampling(points, mde, feedback):
 
     #set the progressbar
