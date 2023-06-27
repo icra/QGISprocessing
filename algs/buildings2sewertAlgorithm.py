@@ -321,7 +321,7 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
     #     should be localised.
     #     """
     #     return self.tr(self.groupId())
-    #
+
     # def groupId(self):
     #     """
     #     Returns the unique ID of the group this algorithm belongs to. This
@@ -330,7 +330,7 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
     #     contain lowercase alphanumeric characters only and no spaces or other
     #     formatting characters.
     #     """
-    #     return 'Sewer system'
+    #     return 'ICRA'
 
     def icon(self):
         return QIcon(os.path.join(pluginPath, '..', 'icons', 'buildings2sewer.png'))

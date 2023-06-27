@@ -33,7 +33,7 @@ __revision__ = '$Format:%H$'
 from qgis.core import QgsProcessingProvider
 from PyQt5.QtGui import QIcon
 import os
-from .algs import (buildings2sewertAlgorithm)
+from .algs import (buildings2sewertAlgorithm, fixTheNetworkAlgorithm)
 
 
 pluginPath = os.path.dirname(__file__)
@@ -59,6 +59,7 @@ class ICRAProvider(QgsProcessingProvider):
         Loads all algorithms belonging to this provider.
         """
         self.addAlgorithm(buildings2sewertAlgorithm.buildings2sewertAlgorithm())
+        self.addAlgorithm(fixTheNetworkAlgorithm.fixTheNetworkAlgorithm())
         # add additional algorithms here
         # self.addAlgorithm(MyOtherAlgorithm())
 
