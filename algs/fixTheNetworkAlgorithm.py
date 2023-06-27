@@ -39,6 +39,8 @@ import processing
 import os
 from .utils.check_extent import check_extent
 from .utils.z_sampling import z_sampling
+from .utils.extract_subgraph import extract_subgraph  
+from .utils.print_subgraph import print_subgrap        
 
 pluginPath = os.path.dirname(__file__)
 
@@ -144,26 +146,40 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
             )
         )
 
+    # modifico nomes aquesta funcio
     def processAlgorithm(self, parameters, context, feedback):
         """
-        Here is where the processing itself takes place.
+        1. read the network data and extract the subgraph connected to EDAR:
+           - disconnected pluvial network, orphan nodos or inoperative segments are excluded
+        2. print the subgraph
         """
-        feedback.setProgressText("Hola!")
+        feedback.setProgressText("Processing...")
 
-        #load layers
+        # Load layers
         nodes = self.parameterAsVectorLayer(parameters, self.NODES, context)
         arcs = self.parameterAsVectorLayer(parameters, self.ARCS, context)
         mde = self.parameterAsRasterLayer(parameters, 'DEM', context)
 
-        # Create FIXED_NODES
-        (fixed_nodes, fixed_nodes_id) = self.parameterAsSink(parameters, self.FIXED_NODES,
-                context, nodes.fields(), nodes.wkbType(), nodes.sourceCrs())
+        # Extract the subgraph
+        subGraph = extract_subgraph(node=nodes, arc=arcs, edar_code='PR0005300')
+        # TODO: edar_code hauria de ser un string que l'usurai defineix en el plugin, deixem el nostre per defecte 
 
-        # Create FIXED_ARCS
-        (fixed_arcs, fixed_arcs_id) = self.parameterAsSink(parameters, self.FIXED_ARCS,
-                 context, arcs.fields(), arcs.wkbType(), arcs.sourceCrs())
+        # imprimim el subgraph
+        subgraph_points, subgraph_lines = print_subgraph(subGraph)
 
-        return {self.FIXED_ARCS: fixed_arcs_id, self.FIXED_NODES: fixed_nodes_id}
+        # Create FIXED_NODES sink
+        (sink_fixed_nodes, sink_fixed_nodes_id) = self.parameterAsSink(parameters, self.FIXED_NODES,
+                context, subgraph_points.fields(), subgraph_points.wkbType(), subgraph_points.sourceCrs())
+
+        # Create FIXED_ARCS sink
+        (sink_fixed_arcs, sink_fixed_arcs_id) = self.parameterAsSink(parameters, self.FIXED_ARCS,
+                context, subgraph_lines.fields(), subgraph_lines.wkbType(), subgraph_lines.sourceCrs())
+
+        # Write the fixed nodes and arcs to the sinks
+        sink_fixed_nodes.addFeatures(subgraph_points.getFeatures())
+        sink_fixed_arcs.addFeatures(subgraph_lines.getFeatures())
+
+        return {self.FIXED_ARCS: sink_fixed_arcs_id, self.FIXED_NODES: sink_fixed_nodes_id}
 
     def name(self):
         """
