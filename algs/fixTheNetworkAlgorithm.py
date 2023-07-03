@@ -37,10 +37,8 @@ from qgis.core import *
 import qgis.utils
 import processing
 import os
-from .utils.check_extent import check_extent
-from .utils.z_sampling import z_sampling
-from .utils.extract_subgraph import extract_subgraph  
-from .utils.print_subgraph import print_subgrap        
+from .utils.extract_subgraph import extract_subgraph
+from .utils.print_subgraph import print_subgraph
 
 pluginPath = os.path.dirname(__file__)
 
@@ -107,7 +105,7 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
         # Define from field in arcs
         self.addParameter(
             QgsProcessingParameterField(
-                'from',
+                'node_1',
                 self.tr('FROM field in segments'),
                 parentLayerParameterName=self.ARCS,
                 allowMultiple=False
@@ -116,10 +114,19 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
 
         self.addParameter(
             QgsProcessingParameterField(
-                'to',
+                'node_2',
                 self.tr('TO field in segments'),
                 parentLayerParameterName=self.ARCS,
                 allowMultiple=False
+            )
+        )
+
+        # Define WWTP code
+        self.addParameter(
+            QgsProcessingParameterString(
+                'wwtp',
+                self.tr('Id of the WWTP in manholes layer'),
+                defaultValue = "32377"
             )
         )
 
@@ -160,9 +167,23 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
         arcs = self.parameterAsVectorLayer(parameters, self.ARCS, context)
         mde = self.parameterAsRasterLayer(parameters, 'DEM', context)
 
+        # Load parameters
+        node_id = self.parameterAsString(parameters, 'node_id', context)
+        node_1 = self.parameterAsString(parameters, 'node_1', context)
+        node_2 = self.parameterAsString(parameters, 'node_2', context)
+        wwtp = self.parameterAsString(parameters, 'wwtp', context)
+
         # Extract the subgraph
-        subGraph = extract_subgraph(node=nodes, arc=arcs, edar_code='PR0005300')
-        # TODO: edar_code hauria de ser un string que l'usurai defineix en el plugin, deixem el nostre per defecte 
+        subGraph = extract_subgraph(
+            nodes = nodes,
+            arcs = arcs,
+            node_id = node_id,
+            node_1 = node_1,
+            node_2 = node_2,
+            edar_code = wwtp,
+            feedback = feedback)
+
+        feedback.setProgressText("TEST: Subgraph retornat")
 
         # imprimim el subgraph
         subgraph_points, subgraph_lines = print_subgraph(subGraph)

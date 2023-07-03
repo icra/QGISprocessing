@@ -1,8 +1,8 @@
-from shapely import LineString
-from pyproj import CRS, Transformer
+# from shapely import LineString
+# from pyproj import CRS, Transformer -> Modificar per algoritmes de QGIS
 import networkx as nx
-import momepy as mm
-import geopandas as gpd
+# import momepy as mm
+# import geopandas as gpd
 
 
 def print_subgraph(subGraph):
