@@ -1,4 +1,5 @@
 import networkx as nx
+import pickle
 
 nodes = QgsVectorLayer(r'C:\Users\jpueyo\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\QGISprocessing\algs\dataset\AdG_node_2021.gpkg','nodes','ogr')
 arcs = QgsVectorLayer(r'C:\Users\jpueyo\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\QGISprocessing\algs\dataset\AdG_arc_2021.gpkg','arcs','ogr')
@@ -6,7 +7,13 @@ arcs = QgsVectorLayer(r'C:\Users\jpueyo\AppData\Roaming\QGIS\QGIS3\profiles\defa
 node_id = 'node_id'
 edar_code = '32377'
 
-
+def update_changed_field(graph, node, list):
+    changed = nx.get_node_attributes(graph, 'changed')
+    if changed.get(node) is None:
+        return list
+    else:
+        return changed[node] + list
+    
 if not nodes.isValid():
     print("Nodes is not valid")
 if not arcs.isValid():
@@ -26,11 +33,41 @@ connected_to_wwtp = nx.node_connected_component(G_notDi, edar_code)
 subGraph = G.subgraph(connected_to_wwtp)
 
 # Set outfall attributes to wwtp node
+changed = update_changed_field(subGraph, edar_code, ['epa_type', 'sys_type', 'node_type'])
+
 new = 'OUTFALL'
-nx.set_node_attributes(subGraph, {edar_code : {'epa_type': new, 'sys_type': new, 'node_type': new }})
+nx.set_node_attributes(subGraph, 
+    {edar_code : {'epa_type': new, 'sys_type': new, 'node_type': new , 
+    'changed': changed}    
+    })
+    
+print("changed_field", nx.get_node_attributes(subGraph, 'changed'))
 
-print(f'The operational network connected to WWTP ({edar_code}) contains: ')
-print(f"nodes =  {len(subGraph.nodes)}")
-print(f"edges = {len(subGraph.edges)}")
+# Create a request to filter the nodes that are in the subGraph
+nodes_dict = {}
+for node in subGraph.nodes(data = True):
+    nodes_dict[node[0]] = node[1]
+nodes_list = list(nodes_dict.keys())
 
-nx.write_adjlist(subGraph, r'C:\Users\jpueyo\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\QGISprocessing\algs\dataset\subGraph.adjlist')
+exp1 = ''
+
+for node in nodes_list:
+    exp1 = exp1 + "\'"
+    exp1 = exp1 + node
+    exp1 = exp1 + "\', "
+
+exp1 = exp1[:-2]
+
+exp = "\"node_id\" IN (" + exp1 + ")" 
+
+exp = QgsExpression(exp)
+request = QgsFeatureRequest(exp)
+
+changed = nx.get_node_attributes(subGraph, 'changed')
+
+for feat in nodes.getFeatures(request):
+    if changed.get(feat[node_id]) is not None:
+        print('changed', feat[node_id])
+        break
+
+

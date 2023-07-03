@@ -31,6 +31,7 @@ __copyright__ = '(C) 2023 by Ruben Oncala, ICRA'
 
 __revision__ = '$Format:%H$'
 
+import networkx as nx
 from qgis.PyQt.QtCore import *
 from PyQt5.QtGui import QIcon
 from qgis.core import *
@@ -38,7 +39,7 @@ import qgis.utils
 import processing
 import os
 from .utils.extract_subgraph import extract_subgraph
-from .utils.print_subgraph import print_subgraph
+from .utils.create_graph_request import create_graph_request
 
 pluginPath = os.path.dirname(__file__)
 
@@ -130,12 +131,12 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
             )
         )
 
-        self.addParameter(
-            QgsProcessingParameterRasterLayer(
-                'DEM',
-                self.tr('Elevations raster')
-            )
-        )
+        # self.addParameter(
+        #     QgsProcessingParameterRasterLayer(
+        #         'DEM',
+        #         self.tr('Elevations raster')
+        #     )
+        # )
 
         self.addParameter(
             QgsProcessingParameterFeatureSink(
@@ -165,7 +166,7 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
         # Load layers
         nodes = self.parameterAsVectorLayer(parameters, self.NODES, context)
         arcs = self.parameterAsVectorLayer(parameters, self.ARCS, context)
-        mde = self.parameterAsRasterLayer(parameters, 'DEM', context)
+        # mde = self.parameterAsRasterLayer(parameters, 'DEM', context)
 
         # Load parameters
         node_id = self.parameterAsString(parameters, 'node_id', context)
@@ -186,21 +187,37 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
         feedback.setProgressText("TEST: Subgraph retornat")
 
         # imprimim el subgraph
-        subgraph_points, subgraph_lines = print_subgraph(subGraph)
+        # subgraph_points, subgraph_lines = print_subgraph(subGraph)
 
         # Create FIXED_NODES sink
         (sink_fixed_nodes, sink_fixed_nodes_id) = self.parameterAsSink(parameters, self.FIXED_NODES,
-                context, subgraph_points.fields(), subgraph_points.wkbType(), subgraph_points.sourceCrs())
+                context, nodes.fields(), nodes.wkbType(), nodes.sourceCrs())
 
         # Create FIXED_ARCS sink
-        (sink_fixed_arcs, sink_fixed_arcs_id) = self.parameterAsSink(parameters, self.FIXED_ARCS,
-                context, subgraph_lines.fields(), subgraph_lines.wkbType(), subgraph_lines.sourceCrs())
+        # (sink_fixed_arcs, sink_fixed_arcs_id) = self.parameterAsSink(parameters, self.FIXED_ARCS,
+        #         context, subgraph_lines.fields(), subgraph_lines.wkbType(), subgraph_lines.sourceCrs())
 
         # Write the fixed nodes and arcs to the sinks
-        sink_fixed_nodes.addFeatures(subgraph_points.getFeatures())
-        sink_fixed_arcs.addFeatures(subgraph_lines.getFeatures())
+        # sink_fixed_nodes.addFeatures(subgraph_points.getFeatures())
+        # sink_fixed_arcs.addFeatures(subgraph_lines.getFeatures())
 
-        return {self.FIXED_ARCS: sink_fixed_arcs_id, self.FIXED_NODES: sink_fixed_nodes_id}
+        #Create request to filter features in nodes
+        request = create_graph_request(subGraph, node_id)
+        changed = nx.get_node_attributes(subGraph, 'changed')
+
+        for node in nodes.getFeatures(request):
+            changed_fields = changed.get(node[node_id])
+            if changed_fields is not None:
+                # iterate fields in changed and replace with new values
+                node_graph = subGraph.subgraph(node[node_id])
+                for field in changed_fields:
+                    node[field] = nx.get_node_attributes(node_graph, field).get(node[node_id])
+            sink_fixed_nodes.addFeature(node, QgsFeatureSink.FastInsert)
+
+        return {
+            # self.FIXED_ARCS: sink_fixed_arcs_id,
+            self.FIXED_NODES: sink_fixed_nodes_id
+        }
 
     def name(self):
         """

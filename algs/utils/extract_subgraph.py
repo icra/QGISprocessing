@@ -1,5 +1,18 @@
 import networkx as nx
 
+'''
+This function is meant to create or update a field in graph called 'changed'.
+The purpose of this field is to update only the modified fields when geometry is created again from the graph
+Each time a node attribute is change, the list-like field for that node must be updated adding the subsequent field 
+that has been updated. Otherwise, the field won't be updated in the conversion back to spatial layer.
+'''
+def update_changed_field(graph, node, list):
+    changed = nx.get_node_attributes(graph, 'changed')
+    if changed.get(node) is None:
+        return list
+    else:
+        return changed[node] + list
+
 def extract_subgraph(nodes, arcs, node_id, node_1, node_2, edar_code, feedback):
 
     # 1. creem un graph amb la xarxa
@@ -30,8 +43,10 @@ def extract_subgraph(nodes, arcs, node_id, node_1, node_2, edar_code, feedback):
     subGraph = G.subgraph(connected_to_wwtp)
 
     # Set outfall attributes to wwtp node
+    changed_field = update_changed_field(subGraph, edar_code, ['epa_type', 'sys_type', 'node_type'])
     new = 'OUTFALL'
-    nx.set_node_attributes(subGraph, {edar_code: {'epa_type': new, 'sys_type': new, 'node_type': new}})
+    nx.set_node_attributes(subGraph, {
+        edar_code: {'epa_type': new, 'sys_type': new, 'node_type': new, 'changed': changed_field}})
 
     feedback.setProgressText(f'The operational network connected to WWTP ({edar_code}) contains: ')
     feedback.setProgressText(f"nodes =  {len(subGraph.nodes)}")
