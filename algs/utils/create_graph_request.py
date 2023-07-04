@@ -1,22 +1,25 @@
 from qgis.core import *
+import networkx as nx
 
-def create_graph_request(subGraph, node_id):
+def create_graph_request(G, element, id):
 
-    nodes_dict = {}
-    for node in subGraph.nodes(data = True):
-        nodes_dict[node[0]] = node[1]
-    nodes_list = list(nodes_dict.keys())
+    if element == 'nodes':
+        idx_list = list(G.nodes())
+    elif element == 'edges':
+        fids = nx.get_edge_attributes(G, id)
+        idx_list = list(fids.values())
+    else:
+        raise Exception('elements must be one of nodes or edges')
 
     exp1 = ''
 
-    for node in nodes_list:
+    for idx in idx_list:
         exp1 = exp1 + "\'"
-        exp1 = exp1 + node
+        exp1 = exp1 + str(idx)
         exp1 = exp1 + "\', "
 
     exp1 = exp1[:-2]
-
-    exp = f"\"{node_id}\" IN (" + exp1 + ")"
+    exp = f"\"{id}\" IN (" + exp1 + ")"
 
     exp = QgsExpression(exp)
     return QgsFeatureRequest(exp)

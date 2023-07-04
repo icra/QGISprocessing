@@ -25,6 +25,35 @@ G.add_nodes_from([(feat[node_id], feat.__geo_interface__["properties"]) for feat
 
 G.add_edges_from([(feat['node_1'], feat['node_2'], feat.__geo_interface__["properties"]) for feat in arcs.getFeatures() if feat['state'] != 0])
 
+def create_graph_request(G, element, id):
+
+    if element == 'nodes':
+        idx_list = list(G.nodes())
+    elif element == 'edges':
+        fids = nx.get_edge_attributes(G, id)
+        idx_list = list(fids.values())
+        print(idx_list)
+    else:
+        raise Exception('elements must be one of nodes or edges')
+
+    exp1 = ''
+
+    for idx in idx_list:
+        exp1 = exp1 + "\'"
+        exp1 = exp1 + str(idx)
+        exp1 = exp1 + "\', "
+
+    exp1 = exp1[:-2]
+    exp = f"\"{id}\" IN (" + exp1 + ")"
+
+    exp = QgsExpression(exp)
+    return QgsFeatureRequest(exp)
+
+print(create_graph_request(G, "edges", 'fid'))
+
+stop()
+
+
 print(f"nodes = {len(G.nodes)}")
 print(f"arcs = {len(G.edges)}")
 

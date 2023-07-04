@@ -43,6 +43,7 @@ from .utils.create_graph_request import create_graph_request
 
 pluginPath = os.path.dirname(__file__)
 
+
 class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
     """
     This is an example algorithm that takes a vector layer and
@@ -61,7 +62,6 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
     # used when calling the algorithm from another algorithm, or when
     # calling from the QGIS console.
 
-    OUTPUT = 'OUTPUT'
     NODES = 'NODES'
     ARCS = 'ARCS'
     FIXED_NODES = 'FIXED_NODES'
@@ -127,22 +127,22 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterString(
                 'wwtp',
                 self.tr('Id of the WWTP in manholes layer'),
-                defaultValue = "32377"
+                defaultValue="32377"
             )
         )
 
-        # self.addParameter(
-        #     QgsProcessingParameterRasterLayer(
-        #         'DEM',
-        #         self.tr('Elevations raster')
-        #     )
-        # )
+        self.addParameter(
+            QgsProcessingParameterRasterLayer(
+                'DEM',
+                self.tr('Elevations raster')
+            )
+        )
 
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.FIXED_NODES,
                 self.tr('Fixed nodes'),
-                type = QgsProcessing.TypeVectorPoint
+                type=QgsProcessing.TypeVectorPoint
             )
         )
 
@@ -150,7 +150,7 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSink(
                 self.FIXED_ARCS,
                 self.tr('Fixed arcs'),
-                type = QgsProcessing.TypeVectorLine
+                type=QgsProcessing.TypeVectorLine
             )
         )
 
@@ -176,13 +176,13 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
 
         # Extract the subgraph
         subGraph = extract_subgraph(
-            nodes = nodes,
-            arcs = arcs,
-            node_id = node_id,
-            node_1 = node_1,
-            node_2 = node_2,
-            edar_code = wwtp,
-            feedback = feedback)
+            nodes=nodes,
+            arcs=arcs,
+            node_id=node_id,
+            node_1=node_1,
+            node_2=node_2,
+            edar_code=wwtp,
+            feedback=feedback)
 
         feedback.setProgressText("TEST: Subgraph retornat")
 
@@ -191,18 +191,16 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
 
         # Create FIXED_NODES sink
         (sink_fixed_nodes, sink_fixed_nodes_id) = self.parameterAsSink(parameters, self.FIXED_NODES,
-                context, nodes.fields(), nodes.wkbType(), nodes.sourceCrs())
+                                                                       context, nodes.fields(), nodes.wkbType(),
+                                                                       nodes.sourceCrs())
 
         # Create FIXED_ARCS sink
-        # (sink_fixed_arcs, sink_fixed_arcs_id) = self.parameterAsSink(parameters, self.FIXED_ARCS,
-        #         context, subgraph_lines.fields(), subgraph_lines.wkbType(), subgraph_lines.sourceCrs())
+        (sink_fixed_arcs, sink_fixed_arcs_id) = self.parameterAsSink(parameters, self.FIXED_ARCS,
+                                                                     context, arcs.fields(), arcs.wkbType(),
+                                                                     arcs.sourceCrs())
 
-        # Write the fixed nodes and arcs to the sinks
-        # sink_fixed_nodes.addFeatures(subgraph_points.getFeatures())
-        # sink_fixed_arcs.addFeatures(subgraph_lines.getFeatures())
-
-        #Create request to filter features in nodes
-        request = create_graph_request(subGraph, node_id)
+        # Create request to filter features in nodes
+        request = create_graph_request(G=subGraph, element="nodes", id=node_id)
         changed = nx.get_node_attributes(subGraph, 'changed')
 
         for node in nodes.getFeatures(request):
@@ -214,8 +212,21 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
                     node[field] = nx.get_node_attributes(node_graph, field).get(node[node_id])
             sink_fixed_nodes.addFeature(node, QgsFeatureSink.FastInsert)
 
+        request = create_graph_request(G=subGraph, element='edges', id='fid')
+        changed = nx.get_edge_attributes(subGraph, 'changed')
+
+        for arc in arcs.getFeatures(request):
+            id = (arc[node_1], arc[node_2])
+            changed_fields = changed.get(id)
+            if changed_fields is not None:
+                # iterate fields in changed and replace with new values
+                edge_graph = subGraph.edge_graph(id)
+                for field in changed_fields:
+                    arc[field] = nx.get_edge_attributes(edge_graph, field).get(id)
+            sink_fixed_arcs.addFeature(arc, QgsFeatureSink.FastInsert)
+
         return {
-            # self.FIXED_ARCS: sink_fixed_arcs_id,
+            self.FIXED_ARCS: sink_fixed_arcs_id,
             self.FIXED_NODES: sink_fixed_nodes_id
         }
 
@@ -247,6 +258,6 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
 
     # TODO: Change help (html format)
     def shortHelpString(self):
-        return "<p>General description</p>"\
-        "<p>Description of the layers it returns</p>"\
-        "<p>Description of input parameters using <ul></p>"
+        return "<p>General description</p>" \
+               "<p>Description of the layers it returns</p>" \
+               "<p>Description of input parameters using <ul></p>"
