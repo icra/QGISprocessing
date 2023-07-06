@@ -62,7 +62,7 @@ connected_to_wwtp = nx.node_connected_component(G_notDi, edar_code)
 subGraph = G.subgraph(connected_to_wwtp)
 
 # Set outfall attributes to wwtp node
-changed = update_changed_field(subGraph, edar_code, ['epa_type', 'sys_type', 'node_type'])
+changed = update_changed_field(subGraph, 'node', edar_code, ['epa_type', 'sys_type', 'node_type'])
 
 new = 'OUTFALL'
 nx.set_node_attributes(subGraph, 
