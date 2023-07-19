@@ -6,6 +6,8 @@ def create_graph_request(G, element, id):
     G is the graph containing the nodes and edges that must be exported as spatial layer
     element is one of 'node' or 'edge' depending in which layer is being created
     id is the field used to filter the spatial layer used as input.
+
+    Returns a QgsFeatureRequest that can be used to filter QgsVectorLayer when getting features
     '''
 
     if element == 'nodes':
