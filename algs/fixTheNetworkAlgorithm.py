@@ -40,6 +40,7 @@ import processing
 import os
 from .utils.extract_subgraph import extract_subgraph
 from .utils.create_graph_request import create_graph_request
+from .utils.directions import correct_directions
 
 pluginPath = os.path.dirname(__file__)
 
@@ -174,6 +175,7 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
         node_2 = self.parameterAsString(parameters, 'node_2', context)
         wwtp = self.parameterAsString(parameters, 'wwtp', context)
 
+        feedback.setProgressText("Extracting subgraph connected to WWTP...")
         # Extract the subgraph
         subGraph = extract_subgraph(
             nodes=nodes,
@@ -182,9 +184,19 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
             node_1=node_1,
             node_2=node_2,
             edar_code=wwtp,
-            feedback=feedback)
+            feedback=feedback
+        )
 
-        feedback.setProgressText("TEST: Subgraph retornat")
+        feedback.setProgressText("Correcting directions...")
+        # Reverse directions to connect everything to WWTP
+        subGraph = correct_directions(
+            subGraph=subGraph,
+            node_id=node_id,
+            node_1=node_1,
+            node_2=node_2,
+            edar_code=wwtp,
+            feedback=feedback
+        )
 
         # imprimim el subgraph
         # subgraph_points, subgraph_lines = print_subgraph(subGraph)
@@ -238,14 +250,14 @@ class fixTheNetworkAlgorithm(QgsProcessingAlgorithm):
         lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'fixTheNetwork'
+        return 'fixthenetwork'
 
     def displayName(self):
         """
         Returns the translated algorithm name, which should be used for any
         user-visible display of the algorithm name.
         """
-        return self.tr(self.name())
+        return 'Fix the network'
 
     def icon(self):
         return QIcon(os.path.join(pluginPath, '..', 'icons', 'fixthenetwork.png'))

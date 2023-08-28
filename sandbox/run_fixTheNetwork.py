@@ -14,4 +14,4 @@ params = {'ARCS': abs_path + 'AdG_arc_2021.gpkg|layername=arc',
           'FIXED_ARCS': 'TEMPORARY_OUTPUT'
           }
 
-processing.runAndLoadResults('ICRA:fixTheNetwork', params, feedback=feedback)
+processing.runAndLoadResults('ICRA:Fix the sewer network', params, feedback=feedback)

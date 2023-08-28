@@ -2,6 +2,9 @@ from qgis.PyQt.QtCore import *
 from qgis.core import *
 def z_sampling(points, mde, feedback):
 
+    layer_name = "parcels" if points.name() == "output" else points.name()
+
+    feedback.setProgressText(f"Calculating Z for {layer_name}...")
     #set the progressbar
     total = 100.0 / points.featureCount() if points.featureCount() else 0
     features = points.getFeatures()
@@ -31,7 +34,10 @@ def z_sampling(points, mde, feedback):
             if feedback.isCanceled():
                 break
 
-            x = point.geometry().asPoint()
+            x = point.geometry()
+            if x.isMultipart():
+                feedback.reportError(f"{layer_name} is Multipart, convert to a single part layer")
+            x = x.asPoint()
             val, res = mde.dataProvider().sample(x, 1)
             point[idx] = val
             mem_layer.updateFeature(point)

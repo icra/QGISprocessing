@@ -135,7 +135,7 @@ class buildings2sewerAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT,
-                self.tr('Output layer'),
+                self.tr('Parcels connected'),
                 type = QgsProcessing.TypeVectorPoint
             )
         )
@@ -170,11 +170,12 @@ class buildings2sewerAlgorithm(QgsProcessingAlgorithm):
         connection_lines = self.parameterAsBool(parameters, 'LINES_BOOL', context)
 
         #convert parcels to centroids
-        parcels = processing.run("native:centroids", {'INPUT':parcels_o,'ALL_PARTS':False,'OUTPUT':'memory:'})['OUTPUT']
+        feedback.setProgressText("Converting parcels to centroids...")
+        parcels = processing.run("native:centroids", {'INPUT': parcels_o,'ALL_PARTS': False,'OUTPUT': 'memory:'})['OUTPUT']
 
         #copy nodes_o
         features = nodes_o.getFeatures()
-        nodes = QgsVectorLayer("Point", "duplicated_layer", "memory")
+        nodes = QgsVectorLayer("Point", "nodes", "memory")
         nodes_data = nodes.dataProvider()
         attr = nodes_o.dataProvider().fields().toList()
         nodes_data.addAttributes(attr)
@@ -189,8 +190,6 @@ class buildings2sewerAlgorithm(QgsProcessingAlgorithm):
         if nodes.fields().indexFromName('z') == -1:
             nodes = z_sampling(nodes, mde, feedback)
 
-        # QgsMessageLog.logMessage("Hello world", 'buildings2sewer', level=Qgis.Info)
-        feedback.setProgressText("Calculation of altitudes finished")
         feedback.setProgressText("Calculating connections...")
 
         #get indexs for nodes fields
@@ -246,6 +245,9 @@ class buildings2sewerAlgorithm(QgsProcessingAlgorithm):
 
         #iterate points
         for current, parcel in enumerate(features):
+            if feedback.isCanceled():
+                break
+
             z_tol = 0
 
             #create pointXY
@@ -317,7 +319,7 @@ class buildings2sewerAlgorithm(QgsProcessingAlgorithm):
         Returns the translated algorithm name, which should be used for any
         user-visible display of the algorithm name.
         """
-        return self.tr(self.name())
+        return 'Connect buildings to sewer'
 
     # def group(self):
     #     """

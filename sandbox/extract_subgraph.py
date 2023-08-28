@@ -4,7 +4,7 @@ import pickle
 nodes = QgsVectorLayer(r'C:\Users\jpueyo\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\QGISprocessing\algs\dataset\AdG_node_2021.gpkg','nodes','ogr')
 arcs = QgsVectorLayer(r'C:\Users\jpueyo\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\QGISprocessing\algs\dataset\AdG_arc_2021.gpkg','arcs','ogr')
 
-print(arcs.crs())
+print(QgsWkbTypes.displayString(nodes.wkbType()))
 #
 #node_id = 'node_id'
 #edar_code = '32377'

@@ -46,4 +46,4 @@ def extract_subgraph(nodes, arcs, node_id, node_1, node_2, edar_code, feedback):
     feedback.setProgressText(f"nodes =  {len(subGraph.nodes)}")
     feedback.setProgressText(f"edges = {len(subGraph.edges)}")
 
-    return subGraph
+    return nx.Graph(subGraph)
