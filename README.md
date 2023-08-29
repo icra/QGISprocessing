@@ -1,6 +1,6 @@
 [![DOI](https://zenodo.org/badge/377531174.svg)](https://zenodo.org/badge/latestdoi/377531174)
 
-# QGIS processing plugins developet at ICRA
+# QGIS processing plugins developed at ICRA
 
 This repository contains all QGIS processing plugin developed at ICRA.
 
