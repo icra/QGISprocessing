@@ -41,6 +41,7 @@ from .utils.z_sampling import z_sampling
 
 pluginPath = os.path.dirname(__file__)
 
+
 class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
     """
     This is an example algorithm that takes a vector layer and
@@ -88,10 +89,20 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
 
         self.addParameter(
             QgsProcessingParameterField(
-                'node_id',
+                'NODE_ID',
                 self.tr('Field with manholes id'),
                 parentLayerParameterName='MANHOLES',
                 allowMultiple=False
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterField(
+                'NODE_Z',
+                self.tr('Field with manholes altitude'),
+                parentLayerParameterName='MANHOLES',
+                allowMultiple=False,
+                optional=True
             )
         )
 
@@ -113,14 +124,14 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 'Z_TOL',
                 self.tr('Altitude tolerance'),
-                type = QgsProcessingParameterNumber.Integer
+                type=QgsProcessingParameterNumber.Integer
             )
         )
 
         self.addParameter(
             QgsProcessingParameterBoolean(
-            'LINES_BOOL',
-            self.tr('Create connection lines')
+                'LINES_BOOL',
+                self.tr('Create connection lines')
             )
         )
 
@@ -128,7 +139,7 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSink(
                 'LINES',
                 self.tr('Connection lines layer'),
-                type = QgsProcessing.TypeVectorLine
+                type=QgsProcessing.TypeVectorLine
             )
         )
 
@@ -136,7 +147,7 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT,
                 self.tr('Output layer'),
-                type = QgsProcessing.TypeVectorPoint
+                type=QgsProcessing.TypeVectorPoint
             )
         )
 
@@ -149,8 +160,8 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
 
-        #load layers and parameters
-        parcels_o = self.parameterAsVectorLayer(parameters,'INPUT', context)
+        # load layers and parameters
+        parcels_o = self.parameterAsVectorLayer(parameters, 'INPUT', context)
         nodes_o = self.parameterAsVectorLayer(parameters, 'MANHOLES', context)
         mde = self.parameterAsRasterLayer(parameters, 'DEM', context)
 
@@ -158,17 +169,18 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
             feedback.reportError("Some of the layers are out of DEM")
             return {}
 
-        #load parameters
+        # load parameters
         max_dist = self.parameterAsDouble(parameters, 'MAX_DIST', context)
         max_z_tol = self.parameterAsInt(parameters, 'Z_TOL', context)
         node_id = self.parameterAsString(parameters, 'NODE_ID', context)
-
+        node_z_field = self.parameterAsString(parameters, 'NODE_Z', context)
         connection_lines = self.parameterAsBool(parameters, 'LINES_BOOL', context)
 
-        #convert parcels to centroids
-        parcels = processing.run("native:centroids", {'INPUT':parcels_o,'ALL_PARTS':False,'OUTPUT':'memory:'})['OUTPUT']
+        # convert parcels to centroids
+        parcels = processing.run("native:centroids", {'INPUT': parcels_o, 'ALL_PARTS': False, 'OUTPUT': 'memory:'})[
+            'OUTPUT']
 
-        #copy nodes_o
+        # copy nodes_o
         features = nodes_o.getFeatures()
         nodes = QgsVectorLayer("Point", "duplicated_layer", "memory")
         nodes_data = nodes.dataProvider()
@@ -177,23 +189,25 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
         nodes.updateFields()
         nodes_data.addFeatures(features)
 
-        #class to calculate distance between points
+        # class to calculate distance between points
         d = QgsDistanceArea()
 
         if parcels.fields().indexFromName('z') == -1:
+            feedback.setProgressText("Calculating altitudes of parcels...")
             parcels = z_sampling(parcels, mde, feedback)
-        if nodes.fields().indexFromName('z') == -1:
+        if node_z_field == '':
+            feedback.setProgressText("Calculating altitudes of nodes...")
             nodes = z_sampling(nodes, mde, feedback)
+            node_z_field = 'z'
 
-        # QgsMessageLog.logMessage("Hello world", 'buildings2sewer', level=Qgis.Info)
         feedback.setProgressText("Calculation of altitudes finished")
         feedback.setProgressText("Calculating connections...")
 
-        #get indexs for nodes fields
+        # get indexs for nodes fields
         node_idx = nodes.fields().indexFromName(node_id)
-        node_z = nodes.fields().indexFromName('z')
+        node_z = nodes.fields().indexFromName(node_z_field)
 
-        #check if fields exist and delete if
+        # check if fields exist and delete if
         if parcels.fields().indexFromName("manhole_id") != -1:
             idx = parcels.fields().indexFromName("manhole_id")
             parcels.dataProvider().deleteAttributes([idx])
@@ -207,15 +221,15 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
             parcels.dataProvider().deleteAttributes([idx])
             parcels.updateFields()
 
-        #create fields to save data
+        # create fields to save data
         parcels.dataProvider().addAttributes([
             QgsField("manhole_id", QVariant.String),
             QgsField("dist", QVariant.Int),
             QgsField("z_diff", QVariant.Double)
-            ])
+        ])
         parcels.updateFields()
 
-        #get index of created fields
+        # get index of created fields
         parcel_node = parcels.fields().indexFromName("manhole_id")
         parcel_dist = parcels.fields().indexFromName("dist")
         parcel_z_diff = parcels.fields().indexFromName("z_diff")
@@ -228,7 +242,7 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
 
         # destination layer
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
-                context, parcels.fields(), parcels.wkbType(), parcels_o.sourceCrs())
+                                               context, parcels.fields(), parcels.wkbType(), parcels_o.sourceCrs())
 
         # connection lines layer
         if connection_lines:
@@ -237,29 +251,31 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
             line_fields.append(QgsField("z_diff", QVariant.Double))
 
             (lines, lines_id) = self.parameterAsSink(parameters, 'LINES',
-                    context, line_fields, 2, parcels_o.sourceCrs())
+                                                     context, line_fields, 2, parcels_o.sourceCrs())
 
-
-        #iterate points
+        # iterate points
         for current, parcel in enumerate(features):
+            if feedback.isCanceled():
+                break
+
             z_tol = 0
 
-            #create pointXY
+            # create pointXY
             p_geom = parcel.geometry().asPoint()
 
-            #set min_dist as infinite
+            # set min_dist as infinite
             min_dist = float('inf')
 
-            #burn variables in case a feature is not valid
+            # burn variables in case a feature is not valid
             closest = 'undefined'
             z_diff = 'undefined'
 
-            #loop until min dist or z-tol reach threshold
+            # loop until min dist or z-tol reach threshold
             while (min_dist >= max_dist) and (z_tol <= max_z_tol):
-                #filter lower nodes
-                exp = QgsExpression('z <= {} + {}'.format(parcel['z'], z_tol))
+                # filter lower nodes
+                exp = QgsExpression('{} <= {} + {}'.format(node_z_field, parcel['z'], z_tol))
                 request = QgsFeatureRequest(exp).setSubsetOfAttributes([node_idx, node_z])
-                #search closest node
+                # search closest node
                 for node in nodes.getFeatures(request):
                     n_geom = node.geometry().asPoint()
                     dist = d.measureLine(p_geom, n_geom)
@@ -277,7 +293,7 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
             # feedback.setProgressText(str(parcel.attributes()))
             sink.addFeature(parcel, QgsFeatureSink.FastInsert)
 
-            #add connection line
+            # add connection line
             if connection_lines:
                 line = QgsFeature(line_fields)
                 line.setAttributes([min_dist, z_diff])
@@ -342,12 +358,12 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
         return buildings2sewertAlgorithm()
 
     def shortHelpString(self):
-        return "<p>This algorithm connects the buildings of a city to the manholes of the sewer system. It connects each building (using the centroid as a departure point) to the closest manhole that is in the same or in a lower altitude.</p>"\
-        "<p>It returns the centroids of the buildings with the following fields:"\
-        "<ul><li>Id of the manhole which the building is connected</li><li>Altitude of the building's centroid</li><li>Distance between the building's centroid and the connected manhole</li>"\
-        "<li>Altitude difference between the building's centroid and the connected manhole</li></ul>"\
-        "If \"Create connection lines is checked\", it also returns a layer with the lines showing each connection.</p>"\
-        "<p>Two parameters can be adjusted:<ul>"\
-        "<li> <b>Maximum distance:</b> If a connection is larger than the maximum distance, the algorithm searches manholes 1 meter above. This iteration is repeated until the connection is shorter than the maximum distance or until the altitude tolerance is reached </li>"\
-        "<li> <b>Altitude tolerance:</b> It determines how many meters upper a manhole can be regarding the building to connect. The altitude tolerance is only used when the maximum distance is surpassed</li>"\
-        "</ul></p>"
+        return "<p>This algorithm connects the buildings of a city to the manholes of the sewer system. It connects each building (using the centroid as a departure point) to the closest manhole that is in the same or in a lower altitude.</p>" \
+               "<p>It returns the centroids of the buildings with the following fields:" \
+               "<ul><li>Id of the manhole which the building is connected</li><li>Altitude of the building's centroid</li><li>Distance between the building's centroid and the connected manhole</li>" \
+               "<li>Altitude difference between the building's centroid and the connected manhole</li></ul>" \
+               "If \"Create connection lines is checked\", it also returns a layer with the lines showing each connection.</p>" \
+               "<p>Two parameters can be adjusted:<ul>" \
+               "<li> <b>Maximum distance:</b> If a connection is larger than the maximum distance, the algorithm searches manholes 1 meter above. This iteration is repeated until the connection is shorter than the maximum distance or until the altitude tolerance is reached </li>" \
+               "<li> <b>Altitude tolerance:</b> It determines how many meters upper a manhole can be regarding the building to connect. The altitude tolerance is only used when the maximum distance is surpassed</li>" \
+               "</ul></p>"

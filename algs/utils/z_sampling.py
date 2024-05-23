@@ -1,6 +1,6 @@
 from qgis.PyQt.QtCore import *
 from qgis.core import *
-def z_sampling(points, mde, feedback):
+def z_sampling(points, mde, feedback, z_field='z'):
 
     #set the progressbar
     total = 100.0 / points.featureCount() if points.featureCount() else 0
@@ -15,13 +15,13 @@ def z_sampling(points, mde, feedback):
     mem_layer_data.addFeatures(features)
 
     #create z field if it don't exist
-    if mem_layer.fields().indexFromName('z') == -1:
-        z = QgsField('z', QVariant.Double)
+    if mem_layer.fields().indexFromName(z_field) == -1:
+        z = QgsField(z_field, QVariant.Double)
         mem_layer.dataProvider().addAttributes([z])
         mem_layer.updateFields()
 
     #search the index of z field
-    idx = mem_layer.fields().indexFromName('z')
+    idx = mem_layer.fields().indexFromName(z_field)
 
     features = mem_layer.getFeatures()
 
