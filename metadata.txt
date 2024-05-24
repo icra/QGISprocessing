@@ -6,7 +6,7 @@
 name=ICRA
 qgisMinimumVersion=3.0
 description=QGIS processing algorithms by ICRA
-version=0.1
+version=1.2
 author=Josep Pueyo-Ros, ICRA
 email=jpueyo@icra.cat
 
