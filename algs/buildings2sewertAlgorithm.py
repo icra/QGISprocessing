@@ -80,6 +80,16 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
         )
 
         self.addParameter(
+            QgsProcessingParameterField(
+                'INPUT_Z',
+                self.tr('Field with buildings altitude'),
+                parentLayerParameterName='INPUT',
+                allowMultiple=False,
+                optional=True
+            )
+        )
+
+        self.addParameter(
             QgsProcessingParameterVectorLayer(
                 'MANHOLES',
                 self.tr('Manholes layer'),
@@ -109,7 +119,8 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterLayer(
                 'DEM',
-                self.tr('Elevations raster')
+                self.tr('Elevations raster'),
+                optional=True
             )
         )
 
@@ -165,16 +176,26 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
         nodes_o = self.parameterAsVectorLayer(parameters, 'MANHOLES', context)
         mde = self.parameterAsRasterLayer(parameters, 'DEM', context)
 
-        if not check_extent(parcels_o, mde) or not check_extent(nodes_o, mde):
-            feedback.reportError("Some of the layers are out of DEM")
-            return {}
-
         # load parameters
         max_dist = self.parameterAsDouble(parameters, 'MAX_DIST', context)
         max_z_tol = self.parameterAsInt(parameters, 'Z_TOL', context)
         node_id = self.parameterAsString(parameters, 'NODE_ID', context)
         node_z_field = self.parameterAsString(parameters, 'NODE_Z', context)
+        parcel_z_field = self.parameterAsString(parameters, 'INPUT_Z', context)
         connection_lines = self.parameterAsBool(parameters, 'LINES_BOOL', context)
+
+        feedback.setProgressText("mde: {}".format(mde is None))
+        feedback.setProgressText("parcel_z_field: {}".format(parcel_z_field == ''))
+        feedback.setProgressText("node_z_field: {}".format(node_z_field == ''))
+
+
+        if mde is None and (parcel_z_field == '' or node_z_field == ''):
+            feedback.reportError("Elevation raster or altitude fields are needed if altitudes not provided in the layers")
+            return {}
+        if mde is not None:
+            if not check_extent(parcels_o, mde) or not check_extent(nodes_o, mde):
+                feedback.reportError("Some of the layers are out of DEM")
+                return {}
 
         # convert parcels to centroids
         parcels = processing.run("native:centroids", {'INPUT': parcels_o, 'ALL_PARTS': False, 'OUTPUT': 'memory:'})[
@@ -192,9 +213,10 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
         # class to calculate distance between points
         d = QgsDistanceArea()
 
-        if parcels.fields().indexFromName('z') == -1:
+        if parcel_z_field == '':
             feedback.setProgressText("Calculating altitudes of parcels...")
             parcels = z_sampling(parcels, mde, feedback)
+            parcel_z_field = 'z'
         if node_z_field == '':
             feedback.setProgressText("Calculating altitudes of nodes...")
             nodes = z_sampling(nodes, mde, feedback)
@@ -224,7 +246,7 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
         # create fields to save data
         parcels.dataProvider().addAttributes([
             QgsField("manhole_id", QVariant.String),
-            QgsField("dist", QVariant.Int),
+            QgsField("dist", QVariant.Double),
             QgsField("z_diff", QVariant.Double)
         ])
         parcels.updateFields()
@@ -233,7 +255,7 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
         parcel_node = parcels.fields().indexFromName("manhole_id")
         parcel_dist = parcels.fields().indexFromName("dist")
         parcel_z_diff = parcels.fields().indexFromName("z_diff")
-        parcel_z = parcels.fields().indexFromName('z')
+        parcel_z = parcels.fields().indexFromName(parcel_z_field)
 
         request = QgsFeatureRequest().setSubsetOfAttributes([parcel_node, parcel_dist, parcel_z_diff, parcel_z])
 
@@ -267,20 +289,26 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
             min_dist = float('inf')
 
             # burn variables in case a feature is not valid
-            closest = 'undefined'
-            z_diff = 'undefined'
+            closest = None
+            z_diff = None
 
             # loop until min dist or z-tol reach threshold
             while (min_dist >= max_dist) and (z_tol <= max_z_tol):
                 # filter lower nodes
-                exp = QgsExpression('{} <= {} + {}'.format(node_z_field, parcel['z'], z_tol))
+                exp = QgsExpression('{} <= {} + {}'.format(node_z_field, parcel[parcel_z_field], z_tol))
                 request = QgsFeatureRequest(exp).setSubsetOfAttributes([node_idx, node_z])
+
+                # if no nodes are found, increase z_tol
+                if len(list(nodes.getFeatures(request))) == 0:
+                    z_tol += 1
+                    continue
+
                 # search closest node
                 for node in nodes.getFeatures(request):
                     n_geom = node.geometry().asPoint()
                     dist = d.measureLine(p_geom, n_geom)
 
-                    if dist < min_dist:
+                    if dist < min_dist and dist > 0:
                         min_dist = dist
                         closest = node[node_idx]
                         z_diff = node[node_z] - parcel[parcel_z]
@@ -294,7 +322,7 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
             sink.addFeature(parcel, QgsFeatureSink.FastInsert)
 
             # add connection line
-            if connection_lines:
+            if connection_lines and closest is not None:
                 line = QgsFeature(line_fields)
                 line.setAttributes([min_dist, z_diff])
                 line.setGeometry(QgsGeometry.fromPolylineXY([p_geom, closest_geom]))
