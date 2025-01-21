@@ -269,11 +269,11 @@ class buildings2sewertAlgorithm(QgsProcessingAlgorithm):
         # connection lines layer
         if connection_lines:
             line_fields = QgsFields()
-            line_fields.append(QgsField("dist", QVariant.Int))
+            line_fields.append(QgsField("dist", QVariant.Double))
             line_fields.append(QgsField("z_diff", QVariant.Double))
 
             (lines, lines_id) = self.parameterAsSink(parameters, 'LINES',
-                                                     context, line_fields, 2, parcels_o.sourceCrs())
+                                                     context, line_fields, Qgis.WkbType.LineString, parcels_o.sourceCrs())
 
         # iterate points
         for current, parcel in enumerate(features):
