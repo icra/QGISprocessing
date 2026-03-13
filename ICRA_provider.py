@@ -31,7 +31,7 @@ __copyright__ = '(C) 2021 by Josep Pueyo-Ros, ICRA'
 __revision__ = '$Format:%H$'
 
 from qgis.core import QgsProcessingProvider
-from PyQt5.QtGui import QIcon
+from qgis.PyQt.QtGui import QIcon
 import os
 from .algs import (buildings2sewertAlgorithm)
 
